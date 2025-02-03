@@ -1,0 +1,33 @@
+/* Custom scrollbar for zones and records tables */
+.zones-container,
+.records-container {
+  height: 70vh; /* 80% of viewport height */
+  overflow-y: auto; /* Enables vertical scrolling when needed */
+  padding: 10px;
+}
+
+/* Scrollbar styling */
+.zones-container::-webkit-scrollbar,
+.records-container::-webkit-scrollbar {
+  width: 8px; /* Width of the scrollbar */
+  height: 8px; /* Height of the horizontal scrollbar */
+}
+
+.zones-container::-webkit-scrollbar-track,
+.records-container::-webkit-scrollbar-track {
+  background: #e0e0e0; /* Track color */
+  border-radius: 4px;
+}
+
+.zones-container::-webkit-scrollbar-thumb,
+.records-container::-webkit-scrollbar-thumb {
+  background: #b3b3b3; /* Thumb color */
+  border-radius: 4px;
+  border: 2px solid #e0e0e0; /* Border around thumb for padding effect */
+}
+
+.zones-container::-webkit-scrollbar-thumb:hover,
+.records-container::-webkit-scrollbar-thumb:hover {
+  background: #808080; /* Hover color */
+  border: 2px solid #e0e0e0; /* Border around thumb for padding effect */
+}
