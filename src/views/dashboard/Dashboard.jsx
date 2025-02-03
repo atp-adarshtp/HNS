@@ -1,13 +1,33 @@
 import React, { useEffect, useState } from "react";
-import { 
-  CCard, CCardBody, CCol, CCardHeader, CRow, CSpinner, 
-  CFormInput, CButton, CTable, CTableBody, CTableHeaderCell, 
+import {
+  CCard, CCardBody, CCol, CCardHeader, CRow, CSpinner,
+  CFormInput, CButton, CTable, CTableBody, CTableHeaderCell,
   CTableRow, CTableDataCell, CTableHead
 } from "@coreui/react";
 import axios from "axios";
 import "./CustomScrollbar.css";
+import '@fortawesome/fontawesome-free/css/all.min.css';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'; // Import FontAwesomeIcon
+import { faSearch } from '@fortawesome/free-solid-svg-icons'; // Import the search icon
 
-const Charts = () => {
+// Custom hook to debounce a value
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
+const Dashboard = () => {
   const [zones, setZones] = useState([]);
   const [filteredZones, setFilteredZones] = useState([]);
   const [records, setRecords] = useState([]);
@@ -21,15 +41,21 @@ const Charts = () => {
 
   const API_TOKEN = import.meta.env.VITE_API_TOKEN;
 
+  // Debounce the search inputs
+  const debouncedZoneSearch = useDebounce(zoneSearch, 500); // debounce search for zones
+  const debouncedRecordSearch = useDebounce(recordSearch, 500); // debounce search for records
+
+  // Fetch Zones
   useEffect(() => {
     const fetchZones = async () => {
+      setError(null);
       try {
         const response = await axios.get("https://dns.hetzner.com/api/v1/zones", {
           headers: { "Auth-API-Token": API_TOKEN },
         });
         setZones(response.data.zones);
         setFilteredZones(response.data.zones);
-      } catch (error) {
+      } catch {
         setError("Failed to fetch zones");
       } finally {
         setLoadingZones(false);
@@ -38,9 +64,12 @@ const Charts = () => {
     fetchZones();
   }, [API_TOKEN]);
 
+  // Fetch Records when Zone is selected
   useEffect(() => {
     if (!zoneId) return;
     setLoadingRecords(true);
+    setError(null);
+    
     const fetchRecords = async () => {
       try {
         const response = await axios.get(
@@ -51,7 +80,7 @@ const Charts = () => {
         );
         setRecords(response.data.records);
         setFilteredRecords(response.data.records);
-      } catch (error) {
+      } catch {
         setError("Failed to fetch records");
       } finally {
         setLoadingRecords(false);
@@ -60,23 +89,25 @@ const Charts = () => {
     fetchRecords();
   }, [zoneId, API_TOKEN]);
 
+  // Filter Zones based on debounced search input
   useEffect(() => {
     setFilteredZones(
       zones.filter((zone) =>
-        zone.name.toLowerCase().includes(zoneSearch.toLowerCase())
+        zone.name.toLowerCase().includes(debouncedZoneSearch.toLowerCase())
       )
     );
-  }, [zoneSearch, zones]);
+  }, [debouncedZoneSearch, zones]);
 
+  // Filter Records based on debounced search input
   useEffect(() => {
     setFilteredRecords(
       records.filter((record) =>
-        record.name.toLowerCase().includes(recordSearch.toLowerCase())
+        record.name.toLowerCase().includes(debouncedRecordSearch.toLowerCase())
       )
     );
-  }, [recordSearch, records]);
+  }, [debouncedRecordSearch, records]);
 
-  // Function to handle record changes
+  // Handle Record Change
   const handleRecordChange = (id, field, value) => {
     setRecords((prevRecords) =>
       prevRecords.map((record) =>
@@ -85,7 +116,7 @@ const Charts = () => {
     );
   };
 
-  // Function to update the record
+  // Update Record
   const updateRecord = async (record) => {
     try {
       await axios.put(
@@ -102,7 +133,7 @@ const Charts = () => {
         }
       );
       alert("Record updated successfully!");
-    } catch (error) {
+    } catch {
       alert("Failed to update record");
     }
   };
@@ -115,43 +146,50 @@ const Charts = () => {
           <CCol xs>
             <CCard className="mb-4">
               <CCardHeader>
-                Your Zones
-                <CFormInput
-                  type="text"
-                  placeholder="Search zones..."
-                  value={zoneSearch}
-                  onChange={(e) => setZoneSearch(e.target.value)}
-                  className="mt-2"
-                />
+                <div className="d-flex justify-content-between align-items-center w-100">
+                  <span>Your Zones</span>
+                  <div className="d-flex">
+                    <div className="input-group">
+                      <CFormInput
+                        type="text"
+                        placeholder="Search zones..."
+                        value={zoneSearch}
+                        onChange={(e) => setZoneSearch(e.target.value)}
+                        className="mt-2 mr-3"
+                      />
+                      <FontAwesomeIcon icon={faSearch} className="search-icon" />
+                    </div>
+                  </div>
+                </div>
               </CCardHeader>
               <CCardBody className="zones-container">
-  {loadingZones ? (
-    <CSpinner color="primary" />
-  ) : error ? (
-    <p className="text-red-500">{error}</p>
-  ) : (
-    <CTable>
-      <CTableHead>
-        <CTableRow>
-          <CTableHeaderCell>Zone Name</CTableHeaderCell>
-          <CTableHeaderCell>Actions</CTableHeaderCell>
-        </CTableRow>
-      </CTableHead>
-      <CTableBody>
-        {filteredZones.map((zone) => (
-          <CTableRow key={zone.id} onClick={() => setZoneId(zone.id)}>
-            <CTableDataCell>{zone.name}</CTableDataCell>
-            <CTableDataCell>
-              <CButton color="primary" size="sm" onClick={() => setZoneId(zone.id)}>
-                Select
-              </CButton>
-            </CTableDataCell>
-          </CTableRow>
-        ))}
-      </CTableBody>
-    </CTable>
-  )}
-</CCardBody>
+                {loadingZones ? (
+                  <CSpinner color="info" />
+                ) : error ? (
+                  <p className="text-red-500">{error}</p>
+                ) : (
+                  <CTable>
+                    <CTableHead>
+                      <CTableRow>
+                        <CTableHeaderCell>Zone Name</CTableHeaderCell>
+                        <CTableHeaderCell>Actions</CTableHeaderCell>
+                      </CTableRow>
+                    </CTableHead>
+                    <CTableBody>
+                      {filteredZones.map((zone) => (
+                        <CTableRow key={zone.id} onClick={() => setZoneId(zone.id)}>
+                          <CTableDataCell>{zone.name}</CTableDataCell>
+                          <CTableDataCell>
+                            <CButton color="info" size="sm" onClick={() => setZoneId(zone.id)}>
+                              Select
+                            </CButton>
+                          </CTableDataCell>
+                        </CTableRow>
+                      ))}
+                    </CTableBody>
+                  </CTable>
+                )}
+              </CCardBody>
             </CCard>
           </CCol>
         </CRow>
@@ -162,19 +200,27 @@ const Charts = () => {
         <CRow>
           <CCol xs>
             <CCard className="mb-4">
-              <CCardHeader>
-                {zones.find((z) => z.id === zoneId)?.name}<br/> All Records
-                <CFormInput
-                  type="text"
-                  placeholder="Search records..."
-                  value={recordSearch}
-                  onChange={(e) => setRecordSearch(e.target.value)}
-                  className="mt-2"
-                />
+            <CCardHeader>
+                <div className="d-flex justify-content-between align-items-center">
+                  <span>Records - {zones.find((z) => z.id === zoneId)?.name}</span>
+                  <CButton color="info" onClick={() => setZoneId(null)}>
+                    Back to Zones
+                  </CButton>
+                </div>
+                <div className="input-group">
+                  <CFormInput
+                    type="text"
+                    placeholder="Search records..."
+                    value={recordSearch}
+                    onChange={(e) => setRecordSearch(e.target.value)}
+                    className="mt-2"
+                  />
+                  <FontAwesomeIcon icon={faSearch} className="search-icon" />
+                </div>
               </CCardHeader>
               <CCardBody className="records-container">
                 {loadingRecords ? (
-                  <CSpinner color="primary" />
+                  <CSpinner color="info" />
                 ) : error ? (
                   <p className="text-red-500">{error}</p>
                 ) : (
@@ -214,7 +260,7 @@ const Charts = () => {
                             />
                           </CTableDataCell>
                           <CTableDataCell>
-                            <CButton color="primary" size="sm" onClick={() => updateRecord(record)}>
+                            <CButton color="info" size="sm" onClick={() => updateRecord(record)}>
                               Save
                             </CButton>
                           </CTableDataCell>
@@ -232,4 +278,4 @@ const Charts = () => {
   );
 };
 
-export default Charts;
+export default Dashboard;
