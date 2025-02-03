@@ -16,7 +16,9 @@
     "build": "vite build",
     "lint": "eslint \"src/**/*.js\"",
     "serve": "vite preview",
-    "start": "vite"
+    "start": "vite",
+    "dev": "vite",
+    "preview": "vite preview"
   },
   "babel": {
     "presets": [
